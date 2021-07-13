@@ -160,6 +160,7 @@ class PedsTrajectoryDataset():
                     self.peds_frames.append(peds_in_curr_seq)
 
 
+
 class TrajectoryDataset(Dataset):
     """Dataloder for the Trajectory datasets"""
     def __init__(
@@ -187,9 +188,6 @@ class TrajectoryDataset(Dataset):
         self.seq_len = self.obs_len + self.pred_len
         self.delim = delim
         self.norm_lap_matr = norm_lap_matr
-        print("self.obs_len", obs_len)
-        print("seq_len", self.seq_len)
-        input("--parameters")
 
         all_files = os.listdir(self.data_dir)
         all_files = [os.path.join(self.data_dir, _path) for _path in all_files]
@@ -198,81 +196,74 @@ class TrajectoryDataset(Dataset):
         seq_list_rel = []
         loss_mask_list = []
         non_linear_ped = []
-        peds_traj=[]
         for path in all_files:
             data = read_file(path, delim)
-            print("data", data)
-            input("data")
             frames = np.unique(data[:, 0]).tolist()
-            numpeds= np.unique(data[:, 1]).tolist()
-            max_num_peds = int(max(numpeds))
-            frame_len=int(max(frames))
-            print("numpeds", max_num_peds)
-            #sort by time frames
             frame_data = []
-            peds_data=dict() #mk
-            for i in range(max_num_peds):
-                peds_data[i]=[0,  0]
-                # print(peds_data)
-
             for frame in frames:
                 frame_data.append(data[frame == data[:, 0], :])
             num_sequences = int(
                 math.ceil((len(frames) - self.seq_len + 1) / skip))
+            # print("self.seq_len", self.seq_len)--20
 
-            # for idx in range(0, num_sequences * self.skip + 1, skip):
-            for idx in range(frame_len):
-                curr_seq_data = frame_data[idx]
-                print("curr_seq_data: ", curr_seq_data)
-
-                # curr_seq_data = np.concatenate(
-                    # frame_data[idx:idx + self.seq_len], axis=0)
+            for idx in range(0, num_sequences * self.skip + 1, skip):
+                curr_seq_data = np.concatenate(
+                    frame_data[idx:idx + self.seq_len], axis=0)
                 peds_in_curr_seq = np.unique(curr_seq_data[:, 1])
+                # print("peds_in_curr_seq", peds_in_curr_seq )
+                #peds_in_curr_seq = > current number of pedestirans for each sequence
+                #number of peds
                 self.max_peds_in_frame = max(self.max_peds_in_frame,len(peds_in_curr_seq))
                 curr_seq_rel = np.zeros((len(peds_in_curr_seq), 2,
                                          self.seq_len))
+                # print("len--peds_in_curr_seq", len(peds_in_curr_seq))
+                # input("--")
+
                 curr_seq = np.zeros((len(peds_in_curr_seq), 2, self.seq_len))
                 curr_loss_mask = np.zeros((len(peds_in_curr_seq),
                                            self.seq_len))
                 num_peds_considered = 0
-                # input("cur_seq_data")
-                print("peds_in_curr_seq", peds_in_curr_seq)
                 _non_linear_ped = []
+                #iteration for individual pedestrian
                 for _, ped_id in enumerate(peds_in_curr_seq):
-                    print("ped_id", ped_id)
-                    
+                    #gather data only for specific ped_id
                     curr_ped_seq = curr_seq_data[curr_seq_data[:, 1] ==
                                                  ped_id, :]
-                    curr_ped_seq = curr_ped_seq[:,2:4][0]
-
-                    print("curr_ped_seq", curr_ped_seq)
-                    peds_data[ped_id]= np.vstack([peds_data[ped_id], curr_ped_seq])
-                    print("peds_data[ped_id",peds_data[ped_id])
-                    input("--")
                     curr_ped_seq = np.around(curr_ped_seq, decimals=4)
-                    '''
+                    #what is curr_ped_seq[0,0]
+                    #what is curr_ped_seq[-1,0]
+                    # print("curr_ped_seq", curr_ped_seq)
+                    # print("curr_ped_seq[0,0]", curr_ped_seq[0,0])
+                    # print("curr_ped_seq[-1,0]", curr_ped_seq[-1,0])
+                    # input("--11--")
+                    # the begining time index when firstly ped comes
                     pad_front = frames.index(curr_ped_seq[0, 0]) - idx
+                    # the lasttime index when the observation of ped 
                     pad_end = frames.index(curr_ped_seq[-1, 0]) - idx + 1
+                    # print("pad_front", pad_front)
+                    # print("pad_end", pad_end)
+                    #do not train when the length of sequence of pedestrian less than seq_len (20)
                     if pad_end - pad_front != self.seq_len:
                         continue
                     curr_ped_seq = np.transpose(curr_ped_seq[:, 2:])
+                    # print("curr_ped_seq", curr_ped_seq)
+                    #collect x-y coordinates
                     curr_ped_seq = curr_ped_seq
-                    # Make coordinates relative
+                    # Make coordinates relative--why??
                     rel_curr_ped_seq = np.zeros(curr_ped_seq.shape)
                     rel_curr_ped_seq[:, 1:] = \
                         curr_ped_seq[:, 1:] - curr_ped_seq[:, :-1]
+                    # print("rel_currr_ped_seq", rel_curr_ped_seq)
                     _idx = num_peds_considered
+                    # print("_idx", _idx)
                     curr_seq[_idx, :, pad_front:pad_end] = curr_ped_seq
                     curr_seq_rel[_idx, :, pad_front:pad_end] = rel_curr_ped_seq
+                    # print("curr_ped_seq_rel ", curr_ped_seq_rel )
                     # Linear vs Non-Linear Trajectory
                     _non_linear_ped.append(
                         poly_fit(curr_ped_seq, pred_len, threshold))
                     curr_loss_mask[_idx, pad_front:pad_end] = 1
-                    '''
                     num_peds_considered += 1
-
-                # print("curr_seq", curr_seq)
-                # input("--")
 
                 if num_peds_considered > min_ped:
                     non_linear_ped += _non_linear_ped
@@ -280,17 +271,17 @@ class TrajectoryDataset(Dataset):
                     loss_mask_list.append(curr_loss_mask[:num_peds_considered])
                     seq_list.append(curr_seq[:num_peds_considered])
                     seq_list_rel.append(curr_seq_rel[:num_peds_considered])
-                
-                peds_traj.append(peds_data)
+                    # print("curr_seq", curr_seq[:num_peds_considered])
+                    # print("curr_seq_rel", curr_seq_rel[:num_peds_considered])
 
         self.num_seq = len(seq_list)
         seq_list = np.concatenate(seq_list, axis=0)
+        # print("seq_list", seq_list)
+        # input("--")
         seq_list_rel = np.concatenate(seq_list_rel, axis=0)
         loss_mask_list = np.concatenate(loss_mask_list, axis=0)
         non_linear_ped = np.asarray(non_linear_ped)
 
-        # print("seq_list", seq_list)
-        # input("here")
         # Convert numpy -> Torch Tensor
         self.obs_traj = torch.from_numpy(
             seq_list[:, :, :self.obs_len]).type(torch.float)
@@ -303,25 +294,30 @@ class TrajectoryDataset(Dataset):
         self.loss_mask = torch.from_numpy(loss_mask_list).type(torch.float)
         self.non_linear_ped = torch.from_numpy(non_linear_ped).type(torch.float)
         cum_start_idx = [0] + np.cumsum(num_peds_in_seq).tolist()
+        # print("cum_start_idx", cum_start_idx)
+        # input("--")
         self.seq_start_end = [
             (start, end)
             for start, end in zip(cum_start_idx, cum_start_idx[1:])
         ]
-        self.peds_traj= ped_traj
+        print("--graph before--")
         #Convert to Graphs 
         self.v_obs = [] 
         self.A_obs = [] 
         self.v_pred = [] 
         self.A_pred = [] 
+        # print("self.seq_start_end", self.seq_start_end)
+        # print("len(self.seq_start_end)", len(self.seq_start_end))
         print("Processing Data .....")
         pbar = tqdm(total=len(self.seq_start_end)) 
         for ss in range(len(self.seq_start_end)):
             pbar.update(1)
 
             start, end = self.seq_start_end[ss]
-
-            # print("self.obs_traj", self.obs_traj)
+            # print("start", start)
+            # print("end", end)
             # input("--")
+
             v_,a_ = seq_to_graph(self.obs_traj[start:end,:],self.obs_traj_rel[start:end, :],self.norm_lap_matr)
             self.v_obs.append(v_.clone())
             self.A_obs.append(a_.clone())
@@ -345,3 +341,5 @@ class TrajectoryDataset(Dataset):
 
         ]
         return out
+
+

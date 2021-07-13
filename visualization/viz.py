@@ -49,7 +49,7 @@ def plot_state(idx, robot_state: torch.Tensor, human_states: torch.Tensor):
     return image
 
 
-def plot_trajectories(idx, peds_in_frame, peds_traj, peds_start_ends ):
+def plot_trajectories(idx, peds_in_frame, peds_traj, preds_trj, peds_start_ends ):
     fig, ax = plt.subplots(figsize=(10, 5))
     # ax.plot(
         # [robot_state[0, 0].item()],
@@ -70,7 +70,7 @@ def plot_trajectories(idx, peds_in_frame, peds_traj, peds_start_ends ):
     # print("peds_traj", peds_traj)
     # print("idx", idx)
     # input("--")
-    for ped in peds_in_frame:
+    for ped_idx, ped in enumerate(peds_in_frame):
         if ped in peds_traj.keys():
             pos = peds_traj.get(ped)
             start = peds_start_ends.get(ped)[0]
@@ -107,6 +107,28 @@ def plot_trajectories(idx, peds_in_frame, peds_traj, peds_start_ends ):
         # print("pos", pos)
         # input("---")
         color_idx = int(ped%7)
+        if ped_idx<len(preds_trj):
+            pred_xs = preds_trj[ped_idx]
+            if len(pred_xs)==1:
+            # print("len_pred_xs[0]", len(pred_xs[0]))
+            # print("len_pred_xs[0][:,0]", len(pred_xs[0][:,0]))
+                pred_xcoords = pred_xs[0][:,0][:,0]
+                pred_ycoords = pred_xs[0][:,0][:,1]
+                ax.plot(pred_xcoords,pred_ycoords,
+                marker="*",
+                markersize=7,
+                color=ColorSet[color_idx],
+                alpha=0.5
+                )
+
+        # print("pred_xs", pred_xs)
+        # print("pred_xs-0", pred_xs[0][0][0])
+        # print("pred_xs-2", pred_xs[0][:,0][:,0])
+        # print("pred_xs-2", pred_xs[0][:,0][:,0])
+        # input("--")
+        # print("pred_xs", pred_xs[0:])
+        # pred_xs = preds_trj[ped_idx]
+        
         # print("pos[0]", pos[0])
         # print("pos[1]", pos[1])
         ax.plot(pos_x,pos_y,
@@ -114,6 +136,7 @@ def plot_trajectories(idx, peds_in_frame, peds_traj, peds_start_ends ):
             markersize=10,
             color=ColorSet[color_idx],
         )
+        
     ax.set_ylim(-2, 16)
     ax.set_xlim(-2, 16)
     fig.canvas.draw()
@@ -142,19 +165,32 @@ def plot_history(game_history, save_path: pathlib.Path):
     )
 
 #for each frame, get peds in that sequence, plot the peds
-def plot_ped_histories(time_frames, peds_frames, peds_traj ,peds_start_ends, save_path: pathlib.Path):
+def plot_ped_histories(time_frames, peds_frames, peds_traj ,predicted_traj, peds_start_ends, save_path: pathlib.Path):
     save_path.parent.mkdir(exist_ok=True, parents=True)
     #get pedestrians in time frame
     #current time frame: 
     # peds = 
     # human_states = [state["human_states"] for state in game_history]
     # print("peds_traj", peds_traj)
+    offset= len(time_frames)-len(predicted_traj)
+    for k in range(offset):
+        offset_tmp={}
+        for j in range(2):
+            offset_tmp[j]=[]
+            offset_tmp[j].append(np.zeros((2,1)))
+            offset_tmp[j].append(np.zeros((2,1)))
+        predicted_traj.append(offset_tmp)
+
+    print("len(time_frames)", len(time_frames))
+    print("len(mk_preds)", len(predicted_traj))
+    # input("--")
+            
 
     imageio.mimsave(
         str(save_path),
         [
-           plot_trajectories(time_frame, peds_frames[time_idx], peds_traj, peds_start_ends)
+           plot_trajectories(time_frame, peds_frames[time_idx], peds_traj, predicted_traj[time_idx],peds_start_ends)
             for time_idx, time_frame in enumerate(time_frames)
         ],
-        fps=5,
+        fps=2,
     )

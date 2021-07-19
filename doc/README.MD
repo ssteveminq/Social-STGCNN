@@ -1,10 +1,10 @@
 document
 
 #### Class PedsTrajetoryDataset
-- input: Dataset (test/)
-- output:peds_traj, peds_start_ends, peds_frames, time_frames
+- Input: Dataset (test/)
+- Output:peds_traj, peds_start_ends, peds_frames, time_frames
 
-<br /> Data management <br/>
+#### Data management <br/>
 1 peds_traj
   - Dictonary format: (key: [ped_id] , value: trajectories)
   - trajectories: [ (x1, y1), (x2, y2), ... (xn, yn) ]

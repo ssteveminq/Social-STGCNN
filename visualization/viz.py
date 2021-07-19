@@ -169,9 +169,6 @@ def plot_ped_histories(time_frames, peds_frames, peds_traj ,predicted_traj, peds
     save_path.parent.mkdir(exist_ok=True, parents=True)
     #get pedestrians in time frame
     #current time frame: 
-    # peds = 
-    # human_states = [state["human_states"] for state in game_history]
-    # print("peds_traj", peds_traj)
     offset= len(time_frames)-len(predicted_traj)
     for k in range(offset):
         offset_tmp={}
@@ -184,8 +181,6 @@ def plot_ped_histories(time_frames, peds_frames, peds_traj ,predicted_traj, peds
     print("len(time_frames)", len(time_frames))
     print("len(mk_preds)", len(predicted_traj))
     # input("--")
-            
-
     imageio.mimsave(
         str(save_path),
         [

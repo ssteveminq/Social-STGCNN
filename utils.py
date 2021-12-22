@@ -129,7 +129,6 @@ class PedsTrajectoryDataset():
             for frame in frames: 
                 frame_data.append(data[frame == data[:, 0], :])
                 # print("frame_data", frame_data)
-                # input("--")
                 # for idx in range(0, num_sequences * self.skip + 1, skip):
             for idx, time_frame in enumerate(frames):
                 if idx <= len(frame_data):
@@ -154,7 +153,6 @@ class PedsTrajectoryDataset():
 
                     #peds_data format key: [ped_id] , value: trajectories
                     self.peds_traj=peds_data
-                    # print("self.peds_traj", self.peds_traj)
                     #peds_start_ends format key: [ped_id] , value: [start_time_idx, end_time_idx]
                     self.peds_start_ends=peds_start_ends
                     self.peds_frames.append(peds_in_curr_seq)
@@ -230,12 +228,9 @@ class TrajectoryDataset(Dataset):
                     curr_ped_seq = curr_seq_data[curr_seq_data[:, 1] ==
                                                  ped_id, :]
                     curr_ped_seq = np.around(curr_ped_seq, decimals=4)
-                    #what is curr_ped_seq[0,0]
-                    #what is curr_ped_seq[-1,0]
                     # print("curr_ped_seq", curr_ped_seq)
                     # print("curr_ped_seq[0,0]", curr_ped_seq[0,0])
                     # print("curr_ped_seq[-1,0]", curr_ped_seq[-1,0])
-                    # input("--11--")
                     # the begining time index when firstly ped comes
                     pad_front = frames.index(curr_ped_seq[0, 0]) - idx
                     # the lasttime index when the observation of ped 
@@ -308,6 +303,7 @@ class TrajectoryDataset(Dataset):
         self.A_pred = [] 
         # print("self.seq_start_end", self.seq_start_end)
         # print("len(self.seq_start_end)", len(self.seq_start_end))
+        '''
         print("Processing Data .....")
         pbar = tqdm(total=len(self.seq_start_end)) 
         for ss in range(len(self.seq_start_end)):
@@ -325,19 +321,22 @@ class TrajectoryDataset(Dataset):
             self.v_pred.append(v_.clone())
             self.A_pred.append(a_.clone())
         pbar.close()
+        '''
 
     def __len__(self):
         return self.num_seq
 
     def __getitem__(self, index):
+
+        print("index", index)
         start, end = self.seq_start_end[index]
 
         out = [
             self.obs_traj[start:end, :], self.pred_traj[start:end, :],
             self.obs_traj_rel[start:end, :], self.pred_traj_rel[start:end, :],
-            self.non_linear_ped[start:end], self.loss_mask[start:end, :],
-            self.v_obs[index], self.A_obs[index],
-            self.v_pred[index], self.A_pred[index]
+            self.non_linear_ped[start:end], self.loss_mask[start:end, :]
+            # self.v_obs[index], self.A_obs[index]
+            # self.v_pred[index], self.A_pred[index]
 
         ]
         return out

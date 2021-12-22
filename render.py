@@ -34,6 +34,7 @@ def render(KSTEPS=1):
         batch = [tensor.cuda() for tensor in batch]
         obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel, non_linear_ped,\
          loss_mask,V_obs,A_obs,V_tr,A_tr = batch
+        print("obs_traj", obs_traj)
 
         num_of_objs = obs_traj_rel.shape[1]
 
@@ -86,13 +87,17 @@ def render(KSTEPS=1):
         ade_ls = {}
         fde_ls = {}
         mk_pres={}
+        # predicted trajectory
         V_x = seq_to_nodes(obs_traj.data.cpu().numpy().copy())
+        # print("V_x",V_x )
         V_x_rel_to_abs = nodes_rel_to_nodes_abs(V_obs.data.cpu().numpy().squeeze().copy(),
                                                  V_x[0,:,:].copy())
+        print("V_x_rel_to_abs ",V_x_rel_to_abs )
 
         V_y = seq_to_nodes(pred_traj_gt.data.cpu().numpy().copy())
         V_y_rel_to_abs = nodes_rel_to_nodes_abs(V_tr.data.cpu().numpy().squeeze().copy(),
                                                  V_x[-1,:,:].copy())
+        print("V_y_rel_to_abs ",V_y_rel_to_abs )
         
         raw_data_dict[step] = {}
         raw_data_dict[step]['obs'] = copy.deepcopy(V_x_rel_to_abs)
@@ -112,11 +117,10 @@ def render(KSTEPS=1):
             V_pred = mvnormal.sample()
             #V_pred = seq_to_nodes(pred_traj_gt.data.numpy().copy())
             V_pred_rel_to_abs = nodes_rel_to_nodes_abs(V_pred.data.cpu().numpy().squeeze().copy(),
-                                                     V_x[-1,:,:].copy())
+                                                V_x[-1,:, :].copy())
             # print("len(V_pred_rel_to_abs)", len(V_pred_rel_to_abs) )
             raw_data_dict[step]['pred'].append(copy.deepcopy(V_pred_rel_to_abs))
-            
-           # print(V_pred_rel_to_abs.shape) #(12, 3, 2) = seq, ped, location
+            # print(V_pred_rel_to_abs.shape) #(12, 3, 2) = seq, ped, location
             for n in range(num_of_objs):
                 pred = [] 
                 target = []
@@ -124,12 +128,15 @@ def render(KSTEPS=1):
                 number_of = []
                 pred.append(V_pred_rel_to_abs[:,n:n+1,:])
                 mk_pres[n].append(V_pred_rel_to_abs[:,n:n+1,:])
+                # print("V_pred_rel_to_abs[:,n:n+1,:]", V_pred_rel_to_abs[:,n:n+1,:])
                 target.append(V_y_rel_to_abs[:,n:n+1,:])
                 obsrvs.append(V_x_rel_to_abs[:,n:n+1,:])
                 number_of.append(1)
 
                 ade_ls[n].append(ade(pred,target,number_of))
                 fde_ls[n].append(fde(pred,target,number_of))
+
+            #print(mk_pres[n] #(12, 3, 2) = seq, ped, location
         # print("pred", pred)
         # print("target", target)
         # print("obsrvs", obsrvs)
@@ -144,9 +151,8 @@ def render(KSTEPS=1):
     fde_ = sum(fde_bigls)/len(fde_bigls)
     return ade_,fde_,raw_data_dict, mk_total_preds
 
-
-
 paths = ['./checkpoint/*social-stgcnn*']
+# paths = ['./checkpoint/*social-stgcnn-hotel']
 KSTEPS=20
 
 # for feta in range(len(paths)):
@@ -197,9 +203,8 @@ for feta in range(1):
                 obs_len=obs_seq_len,
                 pred_len=pred_seq_len,
                 skip=1,norm_lap_matr=True)
-        peds_traj = pedset_test.peds_traj
-        # print("peds_traj", peds_traj)
         #required data for plotting--MK
+        peds_traj = pedset_test.peds_traj
         peds_start_ends = pedset_test.peds_start_ends
         peds_frames = pedset_test.peds_frames
         time_frames = pedset_test.time_frames
